@@ -3,7 +3,7 @@
 // assets/mock-data.js
 // ============================================================
 
-const GAS_URL = 'YOUR_GAS_DEPLOYED_URL_HERE'; // <-- ใส่ URL จาก Deploy as Web App
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzhsQ6mmhYI9vwNgQDA-g1yVGK6lmhlsoPdL9OorbeXSxWTRDQGsbHy_qaIgkP33Pmv/exec'; // <-- ใส่ URL จาก Deploy as Web App
 
 // ── Generic Fetch Wrapper ─────────────────────────────────────
 async function _get(params = {}) {
