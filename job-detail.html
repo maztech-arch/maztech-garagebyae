@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>รายละเอียดงาน — MazTech Garage</title>
+  <link rel="stylesheet" href="assets/styles.css" />
+  <style>
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted);
+      font-size: 13px;
+      margin-bottom: 4px;
+      transition: color 0.15s;
+    }
+    .back-link:hover { color: var(--teal); }
+
+    .detail-layout {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 16px;
+      align-items: start;
+    }
+
+    @media (max-width: 900px) {
+      .detail-layout { grid-template-columns: 1fr; }
+    }
+
+    .item-type-labor { color: var(--blue); }
+    .item-type-parts { color: var(--orange); }
+    .item-free { color: var(--green); font-size: 11px; }
+  </style>
+</head>
+<body>
+
+<div class="app-shell">
+  <aside id="sidebar"></aside>
+
+  <div class="main-area">
+    <header id="topbar"></header>
+
+    <main class="page-content" id="page-main">
+      <div class="loading-state"><div class="spinner"></div><p>กำลังโหลดข้อมูล...</p></div>
+    </main>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script src="assets/mock-data.js"></script>
+<script>
+  renderTopbar('รายละเอียดงาน');
+
+  // Get RE_No from URL
+  const params = new URLSearchParams(window.location.search);
+  const reNo   = params.get('re') || '';
+
+  async function loadJobDetail() {
+    const main = document.getElementById('page-main');
+
+    if (!reNo) {
+      main.innerHTML = `<div class="error-state"><p>ไม่พบเลขที่งาน</p><a href="jobs.html" class="btn btn-outline btn-sm">← กลับ</a></div>`;
+      return;
+    }
+
+    try {
+      const data  = await getJobDetail(reNo);
+      const job   = data.job;
+      const items = data.items || [];
+
+      document.title = `${job.re_no} — MazTech Garage`;
+
+      // Totals from items
+      const totalLabor = items.reduce((s, i) => s + i.labor_cost, 0);
+      const totalParts = items.reduce((s, i) => s + i.parts_cost, 0);
+      const totalSell  = items.reduce((s, i) => s + i.sell_price, 0);
+      const totalMargin= items.reduce((s, i) => s + i.line_margin, 0);
+
+      // Separate labor vs parts items
+      const laborItems = items.filter(i => String(i.item_type || '').includes('แรง') || String(i.item_type || '').toLowerCase().includes('labor'));
+      const partsItems = items.filter(i => !laborItems.includes(i));
+
+      main.innerHTML = `
+        <!-- Back link -->
+        <a href="jobs.html" class="back-link">← กลับรายการงาน</a>
+
+        <!-- Title row -->
+        <div class="page-header">
+          <div class="page-header-left">
+            <h2 style="font-family: var(--font-mono)">${job.re_no}</h2>
+            <p>วันที่รับรถ: ${fmt.date(job.job_date)}</p>
+          </div>
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">
+            ${renderBadge(job.status)}
+            <button class="btn btn-outline btn-sm" onclick="window.print()">🖨 พิมพ์</button>
+          </div>
+        </div>
+
+        <div class="detail-layout">
+
+          <!-- LEFT COLUMN -->
+          <div style="display:flex;flex-direction:column;gap:16px">
+
+            <!-- Customer & Vehicle Info -->
+            <div class="card">
+              <div class="card-header"><span class="card-title">ข้อมูลรถและลูกค้า</span></div>
+              <div class="job-info-grid">
+                <div class="job-info-item">
+                  <label>ทะเบียนรถ</label>
+                  <span style="font-family:var(--font-mono); font-size:18px; color:var(--teal)">${job.license || '-'}</span>
+                </div>
+                <div class="job-info-item">
+                  <label>รุ่นรถ</label>
+                  <span>${job.car_model || '-'}</span>
+                </div>
+                <div class="job-info-item">
+                  <label>เลขไมล์</label>
+                  <span>${job.mileage ? fmt.number(job.mileage) + ' km' : '-'}</span>
+                </div>
+                <div class="job-info-item">
+                  <label>ชื่อลูกค้า</label>
+                  <span>${job.cust_name || '-'}</span>
+                </div>
+                <div class="job-info-item">
+                  <label>เบอร์โทร</label>
+                  <span><a href="tel:${job.phone}" style="color:var(--blue)">${job.phone || '-'}</a></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Service Items -->
+            <div class="card" style="padding:0">
+              <div class="card-header" style="padding:16px 20px 0">
+                <span class="card-title">รายการซ่อมและอะไหล่</span>
+                <span class="badge badge-blue">${items.length} รายการ</span>
+              </div>
+              ${items.length === 0 ? `<div class="empty-state" style="padding:32px">ยังไม่มีรายการ</div>` : `
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>รายการ</th>
+                      <th>ประเภท</th>
+                      <th class="td-right">ต้นทุน</th>
+                      <th class="td-right">ราคาขาย</th>
+                      <th class="td-right">ค่าแรง</th>
+                      <th class="td-right">กำไร</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${items.map(i => `
+                      <tr>
+                        <td>
+                          <div style="font-weight:500">${i.item_name || '-'}</div>
+                          ${i.free_item ? `<div class="item-free">แถม: ${i.free_item}</div>` : ''}
+                          ${i.svc_code ? `<div style="font-size:11px;color:var(--text-dim);font-family:var(--font-mono)">${i.svc_code}</div>` : ''}
+                        </td>
+                        <td><span class="badge badge-gray">${i.item_type || '-'}</span></td>
+                        <td class="td-right td-muted">${fmt.baht(i.parts_cost)}</td>
+                        <td class="td-right td-bold">${fmt.baht(i.sell_price)}</td>
+                        <td class="td-right td-muted">${fmt.baht(i.labor_cost)}</td>
+                        <td class="td-right" style="color:var(--green)">${fmt.baht(i.line_margin)}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+              `}
+            </div>
+
+          </div>
+
+          <!-- RIGHT COLUMN: Summary -->
+          <div style="display:flex;flex-direction:column;gap:16px">
+
+            <div class="card">
+              <div class="card-header"><span class="card-title">สรุปยอด</span></div>
+              <div>
+                <div class="job-total-row">
+                  <span class="td-muted">ต้นทุนอะไหล่รวม</span>
+                  <span>${fmt.baht(totalParts)}</span>
+                </div>
+                <div class="job-total-row">
+                  <span class="td-muted">ค่าแรงรวม</span>
+                  <span>${fmt.baht(totalLabor)}</span>
+                </div>
+                <div class="job-total-row">
+                  <span class="td-muted">กำไรรวม</span>
+                  <span style="color:var(--green)">${fmt.baht(totalMargin)}</span>
+                </div>
+                <div class="job-total-row total-final">
+                  <span>ยอดรวมทั้งสิ้น</span>
+                  <span>${fmt.baht(job.total_sell || totalSell)}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header"><span class="card-title">สถานะงาน</span></div>
+              <div style="display:flex; flex-direction:column; gap:8px">
+                <div>${renderBadge(job.status)}</div>
+                <p style="font-size:13px; color:var(--text-muted)">อัปเดตสถานะผ่าน Google Sheets โดยตรง</p>
+              </div>
+            </div>
+
+            <a href="jobs.html" class="btn btn-secondary btn-full">← กลับรายการงาน</a>
+          </div>
+
+        </div>
+      `;
+
+    } catch (err) {
+      main.innerHTML = `
+        <div class="error-state">
+          <span class="error-icon">⚠</span>
+          <p>${err.message}</p>
+          <div style="display:flex;gap:10px">
+            <button onclick="loadJobDetail()" class="btn btn-outline btn-sm">ลองใหม่</button>
+            <a href="jobs.html" class="btn btn-secondary btn-sm">← กลับ</a>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  loadJobDetail();
+</script>
+</body>
+</html>

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>แดชบอร์ด — MazTech Garage</title>
+  <link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body>
+
+<div class="app-shell">
+  <!-- Sidebar -->
+  <aside id="sidebar"></aside>
+
+  <!-- Main Area -->
+  <div class="main-area">
+    <header id="topbar"></header>
+
+    <main class="page-content">
+
+      <!-- Page Header -->
+      <div class="page-header">
+        <div class="page-header-left">
+          <h2>ภาพรวมธุรกิจ</h2>
+          <p id="month-label">กำลังโหลด...</p>
+        </div>
+        <a href="new-job.html" class="btn btn-primary">+ เปิดงานใหม่</a>
+      </div>
+
+      <!-- KPI Cards -->
+      <div id="kpi-grid" class="kpi-grid">
+        <!-- Skeleton -->
+        ${[1,2,3,4].map(() => `<div class="kpi-card" style="min-height:110px"><div class="loading-state" style="padding:20px"><div class="spinner"></div></div></div>`).join('')}
+      </div>
+
+      <!-- Row: Job Status Cards -->
+      <div id="job-status-grid" class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">
+      </div>
+
+      <!-- Recent Jobs Table -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">งานล่าสุด</span>
+          <a href="jobs.html" class="btn btn-outline btn-sm">ดูทั้งหมด →</a>
+        </div>
+        <div id="recent-jobs-wrap">
+          <div class="loading-state"><div class="spinner"></div><p>กำลังโหลดข้อมูล...</p></div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script src="assets/mock-data.js"></script>
+<script>
+  renderTopbar('แดชบอร์ด');
+
+  async function loadDashboard() {
+    try {
+      const data = await getDashboard();
+      const d    = data.dashboard;
+
+      // Month label
+      const now = new Date();
+      document.getElementById('month-label').textContent =
+        'ข้อมูลประจำเดือน ' + now.toLocaleDateString('th-TH', { month: 'long', year: 'numeric' });
+
+      // KPI Cards
+      document.getElementById('kpi-grid').innerHTML = [
+        buildKpiCard({ title: 'รายรับเดือนนี้',  value: fmt.baht(d.revenueMonth),  icon: '฿', color: 'teal',   sub: 'จากงานส่งมอบแล้ว' }),
+        buildKpiCard({ title: 'ค่าใช้จ่ายเดือนนี้', value: fmt.baht(d.expenseMonth), icon: '↑', color: 'orange' }),
+        buildKpiCard({ title: 'กำไรสุทธิ',       value: fmt.baht(d.netProfit),    icon: '◈', color: d.netProfit >= 0 ? 'green' : 'red' }),
+        buildKpiCard({ title: 'ยอดเงินคงเหลือ',  value: fmt.baht(d.cashBalance),  icon: '◉', color: 'blue' }),
+      ].join('');
+
+      // Job Status Cards
+      document.getElementById('job-status-grid').innerHTML = [
+        buildKpiCard({ title: 'กำลังดำเนินการ', value: d.jobsInProgress, icon: '⚙', color: 'orange' }),
+        buildKpiCard({ title: 'พร้อมส่งมอบ',   value: d.jobsReady,      icon: '✓', color: 'green' }),
+        buildKpiCard({ title: 'ส่งมอบแล้ว',    value: d.jobsDelivered,  icon: '◉', color: 'teal' }),
+        buildKpiCard({ title: 'งานทั้งหมด',    value: d.totalJobs,      icon: '≡', color: 'blue' }),
+      ].join('');
+
+      // Recent Jobs Table
+      const jobs = data.recentJobs || [];
+      if (!jobs.length) {
+        document.getElementById('recent-jobs-wrap').innerHTML =
+          `<div class="empty-state"><p>ยังไม่มีข้อมูลงาน</p></div>`;
+        return;
+      }
+
+      document.getElementById('recent-jobs-wrap').innerHTML = `
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>เลขที่งาน</th>
+                <th>วันที่</th>
+                <th>ทะเบียน</th>
+                <th>รุ่นรถ</th>
+                <th>ลูกค้า</th>
+                <th>สถานะ</th>
+                <th class="td-right">ยอดรวม</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${jobs.map(j => `
+                <tr onclick="location.href='job-detail.html?re=${encodeURIComponent(j.re_no)}'">
+                  <td class="td-mono">${j.re_no || '-'}</td>
+                  <td class="td-muted">${fmt.dateShort(j.job_date)}</td>
+                  <td>${j.license || '-'}</td>
+                  <td>${j.car_model || '-'}</td>
+                  <td>${j.cust_name || '-'}</td>
+                  <td>${renderBadge(j.status)}</td>
+                  <td class="td-right td-bold">${fmt.baht(j.total_sell)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    } catch (err) {
+      document.getElementById('kpi-grid').innerHTML =
+        `<div class="error-state" style="grid-column:1/-1"><span class="error-icon">⚠</span><p>${err.message}</p><button onclick="loadDashboard()" class="btn btn-outline btn-sm">ลองใหม่</button></div>`;
+    }
+  }
+
+  loadDashboard();
+</script>
+</body>
+</html>

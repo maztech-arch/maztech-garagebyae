@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>เปิดงานใหม่ — MazTech Garage</title>
+  <link rel="stylesheet" href="assets/styles.css" />
+  <style>
+    .new-job-layout {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 16px;
+      align-items: start;
+    }
+
+    @media (max-width: 900px) {
+      .new-job-layout { grid-template-columns: 1fr; }
+    }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--teal);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .success-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 500;
+      backdrop-filter: blur(4px);
+    }
+
+    .success-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 40px;
+      text-align: center;
+      max-width: 400px;
+      width: 90%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .success-icon {
+      width: 64px;
+      height: 64px;
+      background: var(--green-dim);
+      color: var(--green);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+    }
+
+    .success-re {
+      font-family: var(--font-mono);
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--teal);
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-shell">
+  <aside id="sidebar"></aside>
+
+  <div class="main-area">
+    <header id="topbar"></header>
+
+    <main class="page-content">
+
+      <!-- Page Header -->
+      <div class="page-header">
+        <div class="page-header-left">
+          <h2>เปิดงานใหม่</h2>
+          <p>กรอกข้อมูลรถและลูกค้า เพื่อเริ่มงานซ่อม</p>
+        </div>
+        <a href="jobs.html" class="btn btn-secondary btn-sm">← กลับ</a>
+      </div>
+
+      <div class="new-job-layout">
+
+        <!-- LEFT: Main Form -->
+        <div style="display:flex;flex-direction:column;gap:16px">
+
+          <!-- Section 1: Customer -->
+          <div class="card">
+            <div class="section-title">ข้อมูลลูกค้า</div>
+            <div class="form-row">
+
+              <!-- Customer Autocomplete -->
+              <div class="form-group">
+                <label class="form-label">ชื่อลูกค้า <span class="req">*</span></label>
+                <div class="autocomplete-wrap">
+                  <input type="text" id="cust-name" class="form-control"
+                    placeholder="พิมพ์ชื่อหรือเบอร์โทรเพื่อค้นหา..."
+                    oninput="onCustSearch()" autocomplete="off" />
+                  <div id="cust-dropdown" class="autocomplete-list" style="display:none"></div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">เบอร์โทรศัพท์ <span class="req">*</span></label>
+                <input type="tel" id="cust-phone" class="form-control"
+                  placeholder="0812345678" oninput="onPhoneSearch()" autocomplete="off" />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Line ID</label>
+                <input type="text" id="cust-line" class="form-control" placeholder="@line_id" />
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Section 2: Vehicle -->
+          <div class="card">
+            <div class="section-title">ข้อมูลรถ</div>
+            <div class="form-row">
+
+              <!-- License Plate Autocomplete -->
+              <div class="form-group">
+                <label class="form-label">ทะเบียนรถ <span class="req">*</span></label>
+                <div class="autocomplete-wrap">
+                  <input type="text" id="license" class="form-control"
+                    placeholder="กข 1234 กรุงเทพมหานคร"
+                    oninput="onLicenseSearch()" style="text-transform:uppercase" autocomplete="off"/>
+                  <div id="license-dropdown" class="autocomplete-list" style="display:none"></div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">รุ่นรถ <span class="req">*</span></label>
+                <select id="car-model" class="form-control">
+                  <option value="">-- เลือกรุ่น --</option>
+                  <optgroup label="CX Series">
+                    <option value="Mazda CX-5 Diesel">CX-5 Diesel</option>
+                    <option value="Mazda CX-5 Petrol">CX-5 Petrol</option>
+                    <option value="Mazda CX-3">CX-3</option>
+                    <option value="Mazda CX-30">CX-30</option>
+                    <option value="Mazda CX-60">CX-60</option>
+                  </optgroup>
+                  <optgroup label="Mazda Series">
+                    <option value="Mazda2">Mazda 2</option>
+                    <option value="Mazda3">Mazda 3</option>
+                    <option value="Mazda6">Mazda 6</option>
+                    <option value="Mazda BT-50">BT-50</option>
+                  </optgroup>
+                  <optgroup label="อื่นๆ">
+                    <option value="Other">อื่นๆ (ระบุใน VIN)</option>
+                  </optgroup>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">เลขไมล์ (km)</label>
+                <input type="number" id="mileage" class="form-control" placeholder="120000" min="0" />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">สีรถ</label>
+                <input type="text" id="car-color" class="form-control" placeholder="สีแดง / ขาว / ดำ" />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">เลขตัวถัง (VIN)</label>
+                <input type="text" id="vin" class="form-control" placeholder="JMZKE..." style="font-family:var(--font-mono)" />
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Section 3: Symptom -->
+          <div class="card">
+            <div class="section-title">รายละเอียดงาน</div>
+            <div class="form-group">
+              <label class="form-label">อาการที่แจ้ง / งานที่ต้องทำ <span class="req">*</span></label>
+              <textarea id="symptom" class="form-control" rows="4"
+                placeholder="เช่น เครื่องยนต์สั่น น้ำมันรั่ว เปลี่ยนถ่ายน้ำมันเครื่อง ตรวจเช็กระบบเบรค..."></textarea>
+            </div>
+            <div class="form-row" style="margin-top:14px">
+              <div class="form-group">
+                <label class="form-label">สถานะเริ่มต้น</label>
+                <select id="job-status" class="form-control">
+                  <option value="รับรถเข้า">รับรถเข้า</option>
+                  <option value="ตรวจเช็ก">ตรวจเช็ก</option>
+                  <option value="กำลังซ่อม">กำลังซ่อม</option>
+                  <option value="รออะไหล่">รออะไหล่</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- RIGHT: Review & Submit -->
+        <div style="display:flex;flex-direction:column;gap:16px;">
+
+          <div class="card">
+            <div class="section-title">ตรวจสอบก่อนบันทึก</div>
+            <div id="review-panel" style="display:flex;flex-direction:column;gap:10px">
+              <div style="color:var(--text-dim); font-size:13px; text-align:center; padding:20px 0">
+                กรอกข้อมูลฝั่งซ้ายเพื่อดูตัวอย่าง
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="background:var(--teal-dim); border-color:var(--teal)">
+            <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px">
+              ระบบจะสร้างเลขที่งาน (RE_No) โดยอัตโนมัติ และบันทึกลูกค้า/รถใหม่ หากยังไม่มีในระบบ
+            </p>
+            <button id="submit-btn" class="btn btn-primary btn-full btn-lg" onclick="submitJob()">
+              ✓ บันทึกเปิดงาน
+            </button>
+            <div id="submit-error" style="margin-top:8px; font-size:13px; color:var(--red); display:none"></div>
+          </div>
+
+        </div>
+
+      </div><!-- end layout -->
+
+    </main>
+  </div>
+</div>
+
+<!-- Success Overlay -->
+<div id="success-overlay" class="success-overlay" style="display:none">
+  <div class="success-card">
+    <div class="success-icon">✓</div>
+    <h3 style="font-size:18px">เปิดงานสำเร็จ!</h3>
+    <div>
+      <p style="font-size:13px;color:var(--text-muted)">เลขที่งาน</p>
+      <div class="success-re" id="success-re-no">-</div>
+    </div>
+    <div style="display:flex;gap:10px;width:100%">
+      <button onclick="viewJob()" class="btn btn-primary" style="flex:1">ดูรายละเอียดงาน</button>
+      <button onclick="resetForm()" class="btn btn-secondary" style="flex:1">+ เปิดงานใหม่</button>
+    </div>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script src="assets/mock-data.js"></script>
+<script>
+  renderTopbar('เปิดงานใหม่');
+
+  // ── State ────────────────────────────────────────────────
+  let _allCustomers = [];
+  let _newReNo = '';
+  let _custSearchTimer = null;
+  let _licenseTimer = null;
+
+  // ── Load customers for autocomplete ─────────────────────
+  async function initCustomers() {
+    try {
+      const data = await getCustomers();
+      _allCustomers = data.customers || [];
+    } catch (e) {
+      // Non-critical: autocomplete won't work but form still functional
+    }
+  }
+  initCustomers();
+
+  // ── Customer Name Autocomplete ───────────────────────────
+  function onCustSearch() {
+    clearTimeout(_custSearchTimer);
+    _custSearchTimer = setTimeout(() => {
+      const q = document.getElementById('cust-name').value.trim().toLowerCase();
+      showCustDropdown(q);
+      updateReview();
+    }, 200);
+  }
+
+  function onPhoneSearch() {
+    const q = document.getElementById('cust-phone').value.trim();
+    const match = _allCustomers.find(c => String(c.phone || '').startsWith(q));
+    if (match && q.length >= 6) {
+      document.getElementById('cust-name').value = match.cust_name;
+      document.getElementById('cust-line').value = match.line_id || '';
+    }
+    updateReview();
+  }
+
+  function showCustDropdown(q) {
+    const dd = document.getElementById('cust-dropdown');
+    if (!q || q.length < 1) { dd.style.display = 'none'; return; }
+
+    const results = _allCustomers.filter(c =>
+      String(c.cust_name || '').toLowerCase().includes(q) ||
+      String(c.phone || '').includes(q)
+    ).slice(0, 8);
+
+    if (!results.length) { dd.style.display = 'none'; return; }
+
+    dd.innerHTML = results.map(c => `
+      <div class="autocomplete-item" onclick="selectCustomer(${JSON.stringify(c).replace(/"/g, '&quot;')})">
+        <div>${c.cust_name}</div>
+        <div class="autocomplete-item-sub">${c.phone || ''} ${c.line_id ? '| Line: '+c.line_id : ''}</div>
+      </div>
+    `).join('');
+    dd.style.display = 'block';
+  }
+
+  function selectCustomer(c) {
+    document.getElementById('cust-name').value  = c.cust_name;
+    document.getElementById('cust-phone').value = c.phone || '';
+    document.getElementById('cust-line').value  = c.line_id || '';
+    document.getElementById('cust-dropdown').style.display = 'none';
+    updateReview();
+  }
+
+  // ── License Plate Autocomplete ───────────────────────────
+  async function onLicenseSearch() {
+    clearTimeout(_licenseTimer);
+    const q = document.getElementById('license').value.trim();
+    updateReview();
+
+    if (q.length < 2) {
+      document.getElementById('license-dropdown').style.display = 'none';
+      return;
+    }
+
+    _licenseTimer = setTimeout(async () => {
+      try {
+        const data = await getVehicles(q);
+        const vehicles = data.vehicles || [];
+        const dd = document.getElementById('license-dropdown');
+
+        if (!vehicles.length) { dd.style.display = 'none'; return; }
+
+        dd.innerHTML = vehicles.slice(0, 6).map(v => `
+          <div class="autocomplete-item" onclick="selectVehicle(${JSON.stringify(v).replace(/"/g, '&quot;')})">
+            <div style="font-family:var(--font-mono)">${v.license}</div>
+            <div class="autocomplete-item-sub">${v.car_model || ''} ${v.color ? '| '+v.color : ''} ${v.mileage ? '| '+v.mileage+' km' : ''}</div>
+          </div>
+        `).join('');
+        dd.style.display = 'block';
+      } catch (e) {
+        document.getElementById('license-dropdown').style.display = 'none';
+      }
+    }, 300);
+  }
+
+  function selectVehicle(v) {
+    document.getElementById('license').value = v.license;
+    if (v.car_model) {
+      const sel = document.getElementById('car-model');
+      // Try to match
+      for (let opt of sel.options) {
+        if (opt.value === v.car_model) { sel.value = v.car_model; break; }
+      }
+    }
+    if (v.mileage) document.getElementById('mileage').value = v.mileage;
+    if (v.color)   document.getElementById('car-color').value = v.color;
+    if (v.vin)     document.getElementById('vin').value = v.vin;
+    document.getElementById('license-dropdown').style.display = 'none';
+    updateReview();
+  }
+
+  // ── Review Panel ─────────────────────────────────────────
+  function updateReview() {
+    const custName  = document.getElementById('cust-name').value.trim();
+    const phone     = document.getElementById('cust-phone').value.trim();
+    const license   = document.getElementById('license').value.trim();
+    const carModel  = document.getElementById('car-model').value;
+    const mileage   = document.getElementById('mileage').value;
+    const symptom   = document.getElementById('symptom').value.trim();
+    const status    = document.getElementById('job-status').value;
+
+    const rows = [
+      { label: 'ลูกค้า',    value: custName || '-' },
+      { label: 'เบอร์',     value: phone    || '-' },
+      { label: 'ทะเบียน',   value: license  ? `<span style="font-family:var(--font-mono);color:var(--teal)">${license}</span>` : '-' },
+      { label: 'รุ่นรถ',    value: carModel || '-' },
+      { label: 'ไมล์',     value: mileage  ? parseInt(mileage).toLocaleString() + ' km' : '-' },
+      { label: 'สถานะ',    value: renderBadge(status) },
+    ];
+
+    document.getElementById('review-panel').innerHTML = rows.map(r => `
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;padding:4px 0;border-bottom:1px solid var(--border)">
+        <span style="color:var(--text-muted)">${r.label}</span>
+        <span style="font-weight:500;text-align:right">${r.value}</span>
+      </div>
+    `).join('') + (symptom ? `
+      <div style="font-size:12px;color:var(--text-dim);margin-top:6px;padding:8px;background:var(--bg-3);border-radius:4px">
+        อาการ: ${symptom.substring(0, 80)}${symptom.length > 80 ? '...' : ''}
+      </div>
+    ` : '');
+  }
+
+  // ── Add event listeners for review update ───────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    ['car-model','mileage','car-color','vin','symptom','job-status'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('input', updateReview);
+      if (el) el.addEventListener('change', updateReview);
+    });
+  });
+
+  // ── Validation ───────────────────────────────────────────
+  function validate() {
+    const required = [
+      { id: 'cust-name', label: 'ชื่อลูกค้า' },
+      { id: 'cust-phone', label: 'เบอร์โทร' },
+      { id: 'license', label: 'ทะเบียนรถ' },
+      { id: 'car-model', label: 'รุ่นรถ' },
+      { id: 'symptom', label: 'อาการที่แจ้ง' },
+    ];
+    for (const f of required) {
+      const el = document.getElementById(f.id);
+      if (!el || !el.value.trim()) {
+        el && el.focus();
+        return `กรุณากรอก "${f.label}"`;
+      }
+    }
+    return null;
+  }
+
+  // ── Submit ───────────────────────────────────────────────
+  async function submitJob() {
+    const errMsg = validate();
+    if (errMsg) {
+      const errEl = document.getElementById('submit-error');
+      errEl.textContent = errMsg;
+      errEl.style.display = 'block';
+      return;
+    }
+
+    document.getElementById('submit-error').style.display = 'none';
+
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner" style="width:18px;height:18px;border-width:2px"></div> กำลังบันทึก...';
+
+    try {
+      const payload = {
+        cust_name:     document.getElementById('cust-name').value.trim(),
+        phone:         document.getElementById('cust-phone').value.trim(),
+        line_id:       document.getElementById('cust-line').value.trim(),
+        license_plate: document.getElementById('license').value.trim().toUpperCase(),
+        car_model:     document.getElementById('car-model').value,
+        mileage:       document.getElementById('mileage').value || '',
+        color:         document.getElementById('car-color').value.trim(),
+        vin:           document.getElementById('vin').value.trim(),
+        symptom:       document.getElementById('symptom').value.trim(),
+        job_status:    document.getElementById('job-status').value,
+        total_sell:    0,
+        total_labor:   0,
+        total_parts:   0,
+      };
+
+      const data = await createJob(payload);
+      _newReNo = data.re_no;
+
+      // Show success overlay
+      document.getElementById('success-re-no').textContent = _newReNo;
+      document.getElementById('success-overlay').style.display = 'flex';
+
+    } catch (err) {
+      const errEl = document.getElementById('submit-error');
+      errEl.textContent = 'เกิดข้อผิดพลาด: ' + err.message;
+      errEl.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '✓ บันทึกเปิดงาน';
+    }
+  }
+
+  function viewJob() {
+    if (_newReNo) location.href = 'job-detail.html?re=' + encodeURIComponent(_newReNo);
+  }
+
+  function resetForm() {
+    document.getElementById('success-overlay').style.display = 'none';
+    ['cust-name','cust-phone','cust-line','license','mileage','car-color','vin','symptom'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    document.getElementById('car-model').value = '';
+    document.getElementById('job-status').value = 'รับรถเข้า';
+    updateReview();
+    _newReNo = '';
+  }
+
+  // ── Close dropdowns on outside click ────────────────────
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.autocomplete-wrap')) {
+      document.querySelectorAll('.autocomplete-list').forEach(d => d.style.display = 'none');
+    }
+  });
+</script>
+</body>
+</html>
