@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ตารางนัดหมาย — MazTech Garage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Barlow+Condensed:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg: #0e0f11;
+    --surface: #16181c;
+    --surface2: #1e2026;
+    --surface3: #252830;
+    --border: #2e3139;
+    --accent: #e8a020;
+    --accent2: #f0b840;
+    --red: #e05050;
+    --green: #4caf82;
+    --blue: #4a90d9;
+    --purple: #8b6fcf;
+    --text: #e8eaf0;
+    --text2: #9aa0b0;
+    --text3: #5a6070;
+    --font-th: 'Sarabun', sans-serif;
+    --font-en: 'Barlow Condensed', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-th);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ══ HEADER ══ */
+  .header {
+    background: var(--surface);
+    border-bottom: 2px solid var(--accent);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .header-logo {
+    font-family: var(--font-en);
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: 1px;
+  }
+  .header-logo span { color: var(--text2); font-weight: 400; font-size: 14px; margin-left: 4px; }
+  .header-nav { display: flex; gap: 8px; }
+  .nav-link {
+    font-size: 13px;
+    color: var(--text2);
+    text-decoration: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    transition: all .2s;
+  }
+  .nav-link:hover, .nav-link.active { background: var(--surface3); color: var(--text); }
+
+  /* ══ LAYOUT ══ */
+  .main { display: grid; grid-template-columns: 280px 1fr; min-height: calc(100vh - 60px); }
+
+  /* ══ SIDEBAR ══ */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow-y: auto;
+  }
+
+  .sidebar-section-title {
+    font-family: var(--font-en);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--text3);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  /* Mini calendar */
+  .mini-cal { }
+  .mini-cal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .mini-cal-title {
+    font-family: var(--font-en);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .mini-cal-btn {
+    background: none;
+    border: none;
+    color: var(--text2);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: all .15s;
+  }
+  .mini-cal-btn:hover { background: var(--surface3); color: var(--accent); }
+  .mini-cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    text-align: center;
+  }
+  .mini-cal-day-label {
+    font-size: 10px;
+    color: var(--text3);
+    padding: 4px 0;
+    font-weight: 600;
+  }
+  .mini-cal-day {
+    font-size: 12px;
+    padding: 5px 2px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all .15s;
+    color: var(--text2);
+  }
+  .mini-cal-day:hover { background: var(--surface3); color: var(--text); }
+  .mini-cal-day.today { background: var(--accent); color: #000; font-weight: 700; }
+  .mini-cal-day.selected { background: var(--surface3); color: var(--accent); border: 1px solid var(--accent); }
+  .mini-cal-day.has-appt { position: relative; }
+  .mini-cal-day.has-appt::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .mini-cal-day.empty { cursor: default; }
+
+  /* Filter */
+  .filter-group { display: flex; flex-direction: column; gap: 6px; }
+  .filter-label { font-size: 12px; color: var(--text2); margin-bottom: 2px; }
+  .filter-select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-family: var(--font-th);
+    font-size: 13px;
+    cursor: pointer;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .filter-select:focus { border-color: var(--accent); }
+
+  /* Stats */
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .stat-num {
+    font-family: var(--font-en);
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--accent);
+  }
+  .stat-label { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  .btn-new {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    padding: 11px 16px;
+    border-radius: 8px;
+    font-family: var(--font-th);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    width: 100%;
+    transition: all .2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .btn-new:hover { background: var(--accent2); transform: translateY(-1px); }
+
+  /* ══ MAIN CONTENT ══ */
+  .content { display: flex; flex-direction: column; overflow: hidden; }
+
+  /* Week nav */
+  .week-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .week-nav-left { display: flex; align-items: center; gap: 12px; }
+  .week-title {
+    font-family: var(--font-en);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .week-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all .15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .week-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .today-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-family: var(--font-th);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .today-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Week calendar grid */
+  .week-calendar {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+  }
+  .cal-grid {
+    display: grid;
+    grid-template-columns: 60px repeat(7, 1fr);
+    min-width: 800px;
+  }
+
+  /* Column headers */
+  .cal-header-row {
+    display: contents;
+  }
+  .cal-time-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    height: 56px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .cal-day-header {
+    background: var(--surface);
+    border-bottom: 2px solid var(--border);
+    border-right: 1px solid var(--border);
+    padding: 8px 4px;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .cal-day-header:hover { background: var(--surface2); }
+  .cal-day-header.today-col { border-bottom-color: var(--accent); }
+  .cal-day-name { font-size: 11px; color: var(--text3); font-weight: 600; }
+  .cal-day-num {
+    font-family: var(--font-en);
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text2);
+    line-height: 1.2;
+  }
+  .cal-day-header.today-col .cal-day-num { color: var(--accent); }
+
+  /* Time slots */
+  .cal-time-slot {
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid #1a1c20;
+    height: 60px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding: 4px 8px 0 0;
+    font-size: 11px;
+    color: var(--text3);
+    font-family: var(--font-en);
+    font-weight: 600;
+  }
+  .cal-cell {
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid #1a1c20;
+    height: 60px;
+    position: relative;
+    padding: 2px;
+    transition: background .1s;
+    cursor: pointer;
+  }
+  .cal-cell:hover { background: rgba(232, 160, 32, 0.04); }
+  .cal-cell.today-col { background: rgba(232, 160, 32, 0.02); }
+
+  /* Appointment cards */
+  .appt-card {
+    position: absolute;
+    left: 3px;
+    right: 3px;
+    border-radius: 5px;
+    padding: 3px 6px;
+    font-size: 11px;
+    cursor: pointer;
+    overflow: hidden;
+    transition: all .15s;
+    z-index: 5;
+    border-left: 3px solid;
+  }
+  .appt-card:hover { filter: brightness(1.15); transform: scale(1.01); z-index: 6; }
+  .appt-card.type-general { background: rgba(74, 144, 217, 0.25); border-color: var(--blue); }
+  .appt-card.type-dpf { background: rgba(139, 111, 207, 0.25); border-color: var(--purple); }
+  .appt-card.type-engine { background: rgba(224, 80, 80, 0.25); border-color: var(--red); }
+  .appt-card.type-transmission { background: rgba(76, 175, 130, 0.25); border-color: var(--green); }
+  .appt-card.type-electrical { background: rgba(232, 160, 32, 0.3); border-color: var(--accent); }
+  .appt-name { font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .appt-detail { color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 10px; }
+
+  /* Slot capacity indicator */
+  .slot-indicator {
+    position: absolute;
+    top: 2px;
+    right: 3px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    opacity: 0.6;
+    pointer-events: none;
+  }
+  .slot-indicator.half { background: var(--accent); }
+  .slot-indicator.full { background: var(--red); }
+
+  /* ══ MODAL ══ */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--accent);
+    border-radius: 12px;
+    width: 480px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 24px;
+    transform: translateY(16px);
+    transition: transform .2s;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+
+  .modal-title {
+    font-family: var(--font-en);
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--accent);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .modal-close {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: var(--text2);
+    cursor: pointer;
+    font-size: 20px;
+    padding: 0 4px;
+    transition: color .15s;
+  }
+  .modal-close:hover { color: var(--red); }
+
+  .form-row { margin-bottom: 14px; }
+  .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+  .form-label {
+    display: block;
+    font-size: 12px;
+    color: var(--text2);
+    margin-bottom: 5px;
+    font-weight: 600;
+    letter-spacing: .5px;
+  }
+  .form-input, .form-select, .form-textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 9px 12px;
+    border-radius: 7px;
+    font-family: var(--font-th);
+    font-size: 13px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); }
+  .form-textarea { resize: vertical; min-height: 70px; }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .status-confirmed { background: rgba(76,175,130,.2); color: var(--green); }
+  .status-pending { background: rgba(232,160,32,.2); color: var(--accent); }
+  .status-cancelled { background: rgba(224,80,80,.2); color: var(--red); }
+  .status-done { background: rgba(90,96,112,.2); color: var(--text3); }
+
+  .modal-actions { display: flex; gap: 8px; margin-top: 20px; justify-content: flex-end; }
+  .btn {
+    padding: 9px 18px;
+    border-radius: 7px;
+    font-family: var(--font-th);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all .15s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-danger { background: rgba(224,80,80,.15); color: var(--red); border: 1px solid rgba(224,80,80,.3); }
+  .btn-danger:hover { background: rgba(224,80,80,.25); }
+  .btn-ghost { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
+  .btn-ghost:hover { background: var(--surface3); color: var(--text); }
+
+  /* Setup modal */
+  .setup-info {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.8;
+    margin-bottom: 16px;
+  }
+  .setup-info code {
+    background: var(--surface3);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--accent);
+    font-size: 12px;
+  }
+
+  /* Toast */
+  .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+  .toast {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 240px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.4);
+    animation: slideIn .2s ease;
+    transition: opacity .3s;
+  }
+  .toast.success { border-left: 3px solid var(--green); }
+  .toast.error { border-left: 3px solid var(--red); }
+  @keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+  /* Loading */
+  .loading-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 2px;
+    background: var(--accent);
+    z-index: 9999;
+    transition: width .3s;
+    width: 0;
+  }
+
+  /* ══ SUPABASE SETUP OVERLAY ══ */
+  .setup-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .setup-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--accent);
+    border-radius: 12px;
+    padding: 32px;
+    width: 480px;
+  }
+  .setup-card h2 {
+    font-family: var(--font-en);
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .setup-card p { font-size: 13px; color: var(--text2); line-height: 1.7; margin-bottom: 20px; }
+  .setup-steps {
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  .setup-steps ol { padding-left: 18px; display: flex; flex-direction: column; gap: 8px; }
+  .setup-steps li { font-size: 12px; color: var(--text2); line-height: 1.6; }
+  .setup-steps code { background: var(--surface3); padding: 1px 5px; border-radius: 3px; color: var(--accent); font-size: 11px; }
+  .sql-block {
+    background: #0a0b0d;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    font-size: 11px;
+    color: #7ec8a0;
+    font-family: monospace;
+    line-height: 1.6;
+    margin: 10px 0;
+    white-space: pre;
+    overflow-x: auto;
+    position: relative;
+  }
+  .copy-sql {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    cursor: pointer;
+    font-family: var(--font-th);
+  }
+  .skip-btn {
+    background: none;
+    border: none;
+    color: var(--text3);
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: underline;
+    font-family: var(--font-th);
+  }
+  .skip-btn:hover { color: var(--text2); }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .main { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="loading-bar" id="loadingBar"></div>
+
+<!-- SETUP OVERLAY -->
+<div class="setup-overlay" id="setupOverlay">
+  <div class="setup-card">
+    <h2>⚙️ ตั้งค่า Supabase</h2>
+    <p>ระบบนัดหมายนี้ใช้ Supabase เป็น database กลาง ทุก device จะเห็นข้อมูลเดียวกัน สร้าง table ด้วย SQL นี้ก่อนครับ:</p>
+
+    <div class="setup-steps">
+      <ol>
+        <li>เข้า <strong>supabase.com</strong> → เลือก project MazTech Garage</li>
+        <li>ไปที่ <strong>SQL Editor</strong> → New Query</li>
+        <li>วาง SQL ด้านล่าง แล้ว Run</li>
+        <li>ไปที่ <strong>Settings → API</strong> → คัดลอก URL และ anon key มาใส่ด้านล่าง</li>
+      </ol>
+    </div>
+
+    <div class="sql-block" id="sqlBlock">CREATE TABLE appointments (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  customer_name text NOT NULL,
+  phone text,
+  car_model text,
+  license_plate text,
+  service_type text NOT NULL,
+  mechanic text,
+  appt_date date NOT NULL,
+  appt_time time NOT NULL,
+  duration_min int DEFAULT 60,
+  status text DEFAULT 'confirmed',
+  notes text,
+  created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "allow_all" ON appointments FOR ALL USING (true);</div>
+    <button class="copy-sql" onclick="copySql()">📋 Copy SQL</button>
+
+    <div class="form-row" style="margin-top:16px">
+      <label class="form-label">Supabase URL</label>
+      <input class="form-input" id="cfgUrl" placeholder="https://xxxx.supabase.co" value="">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Supabase Anon Key</label>
+      <input class="form-input" id="cfgKey" placeholder="eyJhbGciOiJIUzI1NiIs..." value="">
+    </div>
+
+    <div style="display:flex; gap:10px; align-items:center; margin-top:6px">
+      <button class="btn btn-primary" onclick="saveConfig()" style="flex:1">✔ บันทึกและเชื่อมต่อ</button>
+      <button class="skip-btn" onclick="useLocalMode()">ใช้ Local mode แทน (ไม่บันทึกถาวร)</button>
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-brand">
+    <div class="header-logo">MAZTECH <span>GARAGE</span></div>
+  </div>
+  <nav class="header-nav">
+    <a href="https://maztech-arch.github.io/maztech-garagebyae/dashboard.html" class="nav-link">แดชบอร์ด</a>
+    <a href="#" class="nav-link active">📅 ตารางนัด</a>
+    <a href="https://maztech-arch.github.io/maztech-garagebyae/jobs.html" class="nav-link">งานทั้งหมด</a>
+  </nav>
+</header>
+
+<div class="main">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <button class="btn-new" onclick="openNewModal()">
+      + นัดหมายใหม่
+    </button>
+
+    <div>
+      <div class="sidebar-section-title">ปฏิทิน</div>
+      <div class="mini-cal">
+        <div class="mini-cal-header">
+          <button class="mini-cal-btn" onclick="miniCalPrev()">‹</button>
+          <span class="mini-cal-title" id="miniCalTitle"></span>
+          <button class="mini-cal-btn" onclick="miniCalNext()">›</button>
+        </div>
+        <div class="mini-cal-grid" id="miniCalGrid"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sidebar-section-title">กรองข้อมูล</div>
+      <div class="filter-group">
+        <label class="filter-label">ช่าง</label>
+        <select class="filter-select" id="filterMechanic" onchange="applyFilters()">
+          <option value="">— ช่างทั้งหมด —</option>
+          <option>สุทธินนท์</option>
+          <option>ภควัต</option>
+          <option>อภิสิทธิ์</option>
+        </select>
+        <label class="filter-label" style="margin-top:8px">ประเภทงาน</label>
+        <select class="filter-select" id="filterType" onchange="applyFilters()">
+          <option value="">— ทุกประเภท —</option>
+          <option value="general">งานทั่วไป / เช็คระยะ</option>
+          <option value="dpf">DPF / ไอเสีย</option>
+          <option value="engine">เครื่องยนต์ / Turbo</option>
+          <option value="transmission">เกียร์ / ช่วงล่าง</option>
+          <option value="electrical">ไฟฟ้า / ระบบ</option>
+        </select>
+        <label class="filter-label" style="margin-top:8px">สถานะ</label>
+        <select class="filter-select" id="filterStatus" onchange="applyFilters()">
+          <option value="">— ทุกสถานะ —</option>
+          <option value="confirmed">✅ ยืนยันแล้ว</option>
+          <option value="pending">⏳ รอยืนยัน</option>
+          <option value="done">✔ เสร็จแล้ว</option>
+          <option value="cancelled">✖ ยกเลิก</option>
+        </select>
+      </div>
+    </div>
+
+    <div>
+      <div class="sidebar-section-title">สรุปสัปดาห์นี้</div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-num" id="statTotal">0</div><div class="stat-label">นัดทั้งหมด</div></div>
+        <div class="stat-card"><div class="stat-num" id="statToday">0</div><div class="stat-label">วันนี้</div></div>
+        <div class="stat-card"><div class="stat-num" id="statConfirmed">0</div><div class="stat-label">ยืนยัน</div></div>
+        <div class="stat-card"><div class="stat-num" id="statPending">0</div><div class="stat-label">รอยืนยัน</div></div>
+      </div>
+    </div>
+
+    <div style="margin-top:auto">
+      <button class="btn btn-ghost" style="width:100%;font-size:11px" onclick="showSetup()">⚙️ ตั้งค่า Database</button>
+    </div>
+  </aside>
+
+  <!-- CALENDAR CONTENT -->
+  <div class="content">
+    <div class="week-nav">
+      <div class="week-nav-left">
+        <button class="week-btn" onclick="prevWeek()">‹</button>
+        <button class="week-btn" onclick="nextWeek()">›</button>
+        <button class="today-btn" onclick="goToday()">วันนี้</button>
+        <span class="week-title" id="weekTitle"></span>
+      </div>
+      <div id="connectionStatus" style="font-size:12px; color:var(--text3)">⚪ Local mode</div>
+    </div>
+
+    <div class="week-calendar">
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- APPOINTMENT MODAL -->
+<div class="modal-overlay" id="apptModal">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="modalTitleText">📋 เพิ่มนัดหมายใหม่</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+
+    <input type="hidden" id="editId">
+
+    <div class="form-row-2">
+      <div>
+        <label class="form-label">ชื่อลูกค้า *</label>
+        <input class="form-input" id="fName" placeholder="ชื่อ-นามสกุล">
+      </div>
+      <div>
+        <label class="form-label">เบอร์โทร</label>
+        <input class="form-input" id="fPhone" placeholder="08x-xxx-xxxx">
+      </div>
+    </div>
+
+    <div class="form-row-2">
+      <div>
+        <label class="form-label">รุ่นรถ</label>
+        <input class="form-input" id="fCar" placeholder="CX-5, Mazda2, BT-50...">
+      </div>
+      <div>
+        <label class="form-label">ทะเบียนรถ</label>
+        <input class="form-input" id="fPlate" placeholder="กข 1234">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <label class="form-label">ประเภทงาน *</label>
+      <select class="form-select" id="fType">
+        <option value="general">งานทั่วไป / เช็คระยะ</option>
+        <option value="dpf">DPF / ไอเสีย</option>
+        <option value="engine">เครื่องยนต์ / Turbo / SCV</option>
+        <option value="transmission">เกียร์ / ช่วงล่าง</option>
+        <option value="electrical">ไฟฟ้า / ระบบ ECU</option>
+      </select>
+    </div>
+
+    <div class="form-row-2">
+      <div>
+        <label class="form-label">ช่างที่รับผิดชอบ</label>
+        <select class="form-select" id="fMechanic">
+          <option value="">— ยังไม่ระบุ —</option>
+          <option>สุทธินนท์</option>
+          <option>ภควัต</option>
+          <option>อภิสิทธิ์</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">สถานะ</label>
+        <select class="form-select" id="fStatus">
+          <option value="confirmed">✅ ยืนยันแล้ว</option>
+          <option value="pending">⏳ รอยืนยัน</option>
+          <option value="done">✔ เสร็จแล้ว</option>
+          <option value="cancelled">✖ ยกเลิก</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row-2">
+      <div>
+        <label class="form-label">วันที่นัด *</label>
+        <input class="form-input" type="date" id="fDate">
+      </div>
+      <div>
+        <label class="form-label">เวลา *</label>
+        <input class="form-input" type="time" id="fTime" value="09:00">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <label class="form-label">ระยะเวลาโดยประมาณ (นาที)</label>
+      <select class="form-select" id="fDuration">
+        <option value="30">30 นาที</option>
+        <option value="60" selected>1 ชั่วโมง</option>
+        <option value="90">1.5 ชั่วโมง</option>
+        <option value="120">2 ชั่วโมง</option>
+        <option value="180">3 ชั่วโมง</option>
+        <option value="240">ครึ่งวัน (4 ชม.)</option>
+        <option value="480">เต็มวัน</option>
+      </select>
+    </div>
+
+    <div class="form-row">
+      <label class="form-label">หมายเหตุ</label>
+      <textarea class="form-textarea" id="fNotes" placeholder="อาการ, ของที่ต้องเตรียม, ฯลฯ"></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="btnDelete" onclick="deleteAppt()" style="display:none">🗑 ลบ</button>
+      <button class="btn btn-ghost" onclick="closeModal()">ยกเลิก</button>
+      <button class="btn btn-primary" onclick="saveAppt()">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ══════════════════════════════════════════
+// CONFIG & STATE
+// ══════════════════════════════════════════
+let supabaseClient = null;
+let localMode = false;
+let appointments = []; // all loaded appointments
+let filteredAppts = [];
+let currentWeekStart = getMonday(new Date());
+let miniCalDate = new Date();
+let editingId = null;
+
+const HOURS_START = 7;
+const HOURS_END = 19;
+const MAX_PER_SLOT = 3;
+
+const TYPE_LABELS = {
+  general: 'งานทั่วไป',
+  dpf: 'DPF',
+  engine: 'เครื่องยนต์',
+  transmission: 'เกียร์/ช่วงล่าง',
+  electrical: 'ไฟฟ้า'
+};
+
+const DAY_TH = ['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'];
+const MONTH_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const MONTH_TH_FULL = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  const url = localStorage.getItem('sb_url');
+  const key = localStorage.getItem('sb_key');
+  if (url && key) {
+    initSupabase(url, key);
+  } else {
+    // Show setup
+    document.getElementById('setupOverlay').style.display = 'flex';
+  }
+  renderMiniCal();
+});
+
+function initSupabase(url, key) {
+  try {
+    // Support both old (eyJ...) and new (sb_publishable_...) key formats
+    const clientOptions = {};
+    if (key.startsWith('sb_publishable_') || key.startsWith('sb_secret_')) {
+      clientOptions.auth = { persistSession: true };
+    }
+    supabaseClient = window.supabase.createClient(url, key, clientOptions);
+    localMode = false;
+    document.getElementById('connectionStatus').textContent = '🟢 Supabase';
+    document.getElementById('connectionStatus').style.color = 'var(--green)';
+    document.getElementById('setupOverlay').style.display = 'none';
+    loadAppointments();
+  } catch(e) {
+    showToast('เชื่อมต่อ Supabase ไม่ได้: ' + e.message, 'error');
+    useLocalMode();
+  }
+}
+
+function saveConfig() {
+  const url = document.getElementById('cfgUrl').value.trim();
+  const key = document.getElementById('cfgKey').value.trim();
+  if (!url || !key) { showToast('กรุณากรอก URL และ Key', 'error'); return; }
+  localStorage.setItem('sb_url', url);
+  localStorage.setItem('sb_key', key);
+  initSupabase(url, key);
+}
+
+function useLocalMode() {
+  localMode = true;
+  supabaseClient = null;
+  const saved = localStorage.getItem('local_appts');
+  appointments = saved ? JSON.parse(saved) : getSampleData();
+  document.getElementById('connectionStatus').textContent = '⚪ Local mode';
+  document.getElementById('setupOverlay').style.display = 'none';
+  applyFilters();
+  renderWeek();
+  renderMiniCal();
+  updateStats();
+}
+
+function showSetup() {
+  document.getElementById('setupOverlay').style.display = 'flex';
+}
+
+function copySql() {
+  const sql = document.getElementById('sqlBlock').textContent;
+  navigator.clipboard.writeText(sql).then(() => showToast('คัดลอก SQL แล้ว ✓', 'success'));
+}
+
+// ══════════════════════════════════════════
+// DATA
+// ══════════════════════════════════════════
+async function loadAppointments() {
+  if (localMode || !supabaseClient) return;
+  setLoading(true);
+  const { data, error } = await supabaseClient
+    .from('appointments')
+    .select('*')
+    .order('appt_date', { ascending: true })
+    .order('appt_time', { ascending: true });
+  setLoading(false);
+  if (error) { showToast('โหลดข้อมูลไม่ได้: ' + error.message, 'error'); return; }
+  appointments = data || [];
+  applyFilters();
+  renderWeek();
+  renderMiniCal();
+  updateStats();
+}
+
+async function saveAppt() {
+  const name = document.getElementById('fName').value.trim();
+  const date = document.getElementById('fDate').value;
+  const time = document.getElementById('fTime').value;
+  const type = document.getElementById('fType').value;
+  if (!name || !date || !time) { showToast('กรุณากรอกข้อมูลที่จำเป็น', 'error'); return; }
+
+  const appt = {
+    customer_name: name,
+    phone: document.getElementById('fPhone').value.trim(),
+    car_model: document.getElementById('fCar').value.trim(),
+    license_plate: document.getElementById('fPlate').value.trim(),
+    service_type: type,
+    mechanic: document.getElementById('fMechanic').value,
+    appt_date: date,
+    appt_time: time,
+    duration_min: parseInt(document.getElementById('fDuration').value),
+    status: document.getElementById('fStatus').value,
+    notes: document.getElementById('fNotes').value.trim(),
+  };
+
+  if (localMode) {
+    if (editingId) {
+      const idx = appointments.findIndex(a => a.id === editingId);
+      if (idx >= 0) appointments[idx] = { ...appointments[idx], ...appt };
+    } else {
+      appt.id = 'local_' + Date.now();
+      appt.created_at = new Date().toISOString();
+      appointments.push(appt);
+    }
+    localStorage.setItem('local_appts', JSON.stringify(appointments));
+    showToast(editingId ? 'แก้ไขนัดหมายแล้ว' : 'เพิ่มนัดหมายแล้ว', 'success');
+    closeModal();
+    applyFilters(); renderWeek(); renderMiniCal(); updateStats();
+    return;
+  }
+
+  setLoading(true);
+  let error;
+  if (editingId) {
+    ({ error } = await supabaseClient.from('appointments').update(appt).eq('id', editingId));
+  } else {
+    ({ error } = await supabaseClient.from('appointments').insert(appt));
+  }
+  setLoading(false);
+  if (error) { showToast('บันทึกไม่สำเร็จ: ' + error.message, 'error'); return; }
+  showToast(editingId ? 'แก้ไขนัดหมายแล้ว ✓' : 'เพิ่มนัดหมายแล้ว ✓', 'success');
+  closeModal();
+  loadAppointments();
+}
+
+async function deleteAppt() {
+  if (!editingId) return;
+  if (!confirm('ยืนยันการลบนัดหมายนี้?')) return;
+
+  if (localMode) {
+    appointments = appointments.filter(a => a.id !== editingId);
+    localStorage.setItem('local_appts', JSON.stringify(appointments));
+    showToast('ลบนัดหมายแล้ว', 'success');
+    closeModal();
+    applyFilters(); renderWeek(); renderMiniCal(); updateStats();
+    return;
+  }
+
+  setLoading(true);
+  const { error } = await supabaseClient.from('appointments').delete().eq('id', editingId);
+  setLoading(false);
+  if (error) { showToast('ลบไม่สำเร็จ: ' + error.message, 'error'); return; }
+  showToast('ลบนัดหมายแล้ว ✓', 'success');
+  closeModal();
+  loadAppointments();
+}
+
+// ══════════════════════════════════════════
+// FILTERS
+// ══════════════════════════════════════════
+function applyFilters() {
+  const mechanic = document.getElementById('filterMechanic').value;
+  const type = document.getElementById('filterType').value;
+  const status = document.getElementById('filterStatus').value;
+  filteredAppts = appointments.filter(a => {
+    if (mechanic && a.mechanic !== mechanic) return false;
+    if (type && a.service_type !== type) return false;
+    if (status && a.status !== status) return false;
+    return true;
+  });
+  renderWeek();
+  updateStats();
+}
+
+// ══════════════════════════════════════════
+// WEEK CALENDAR RENDER
+// ══════════════════════════════════════════
+function renderWeek() {
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  // Week days
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(currentWeekStart);
+    d.setDate(d.getDate() + i);
+    days.push(d);
+  }
+
+  // Update week title
+  const ws = days[0], we = days[6];
+  document.getElementById('weekTitle').textContent =
+    `${ws.getDate()} ${MONTH_TH[ws.getMonth()]} – ${we.getDate()} ${MONTH_TH[we.getMonth()]} ${we.getFullYear() + 543}`;
+
+  // Header row
+  const timeH = document.createElement('div');
+  timeH.className = 'cal-time-header';
+  grid.appendChild(timeH);
+
+  days.forEach((d, i) => {
+    const isToday = d.getTime() === today.getTime();
+    const h = document.createElement('div');
+    h.className = 'cal-day-header' + (isToday ? ' today-col' : '');
+    h.innerHTML = `<div class="cal-day-name">${DAY_TH[d.getDay()]}</div><div class="cal-day-num">${d.getDate()}</div>`;
+    h.onclick = () => { openNewModalOnDate(d); };
+    grid.appendChild(h);
+  });
+
+  // Hour rows
+  for (let h = HOURS_START; h < HOURS_END; h++) {
+    // Time label
+    const tl = document.createElement('div');
+    tl.className = 'cal-time-slot';
+    tl.textContent = `${h.toString().padStart(2,'0')}:00`;
+    grid.appendChild(tl);
+
+    days.forEach((d, di) => {
+      const isToday = d.getTime() === today.getTime();
+      const cell = document.createElement('div');
+      cell.className = 'cal-cell' + (isToday ? ' today-col' : '');
+
+      const dateStr = dateToStr(d);
+      const slotAppts = filteredAppts.filter(a => {
+        if (a.appt_date !== dateStr) return false;
+        const aH = parseInt(a.appt_time.split(':')[0]);
+        return aH === h;
+      });
+
+      // Slot indicator
+      if (slotAppts.length > 0) {
+        const ind = document.createElement('div');
+        ind.className = 'slot-indicator' + (slotAppts.length >= MAX_PER_SLOT ? ' full' : slotAppts.length >= 2 ? ' half' : '');
+        cell.appendChild(ind);
+      }
+
+      // Appointment cards
+      slotAppts.forEach((a, idx) => {
+        const card = document.createElement('div');
+        card.className = `appt-card type-${a.service_type}`;
+        const topOffset = 4 + idx * 18;
+        const heightPx = Math.min(Math.round(a.duration_min / 60 * 60) - 4, 56 - topOffset);
+        card.style.top = topOffset + 'px';
+        card.style.height = Math.max(heightPx, 16) + 'px';
+        card.innerHTML = `<div class="appt-name">${a.customer_name}</div><div class="appt-detail">${a.car_model || ''} ${a.mechanic ? '· ' + a.mechanic : ''}</div>`;
+        card.onclick = (e) => { e.stopPropagation(); openEditModal(a); };
+        cell.appendChild(card);
+      });
+
+      cell.onclick = () => {
+        const d2 = new Date(d);
+        openNewModalOnDate(d2, h);
+      };
+      grid.appendChild(cell);
+    });
+  }
+}
+
+// ══════════════════════════════════════════
+// MINI CAL
+// ══════════════════════════════════════════
+function renderMiniCal() {
+  const title = document.getElementById('miniCalTitle');
+  title.textContent = `${MONTH_TH_FULL[miniCalDate.getMonth()]} ${miniCalDate.getFullYear() + 543}`;
+
+  const grid = document.getElementById('miniCalGrid');
+  grid.innerHTML = '';
+  ['อา','จ','อ','พ','พฤ','ศ','ส'].forEach(d => {
+    const el = document.createElement('div');
+    el.className = 'mini-cal-day-label';
+    el.textContent = d;
+    grid.appendChild(el);
+  });
+
+  const first = new Date(miniCalDate.getFullYear(), miniCalDate.getMonth(), 1);
+  const startPad = first.getDay();
+  const daysInMonth = new Date(miniCalDate.getFullYear(), miniCalDate.getMonth() + 1, 0).getDate();
+
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  for (let i = 0; i < startPad; i++) {
+    const el = document.createElement('div');
+    el.className = 'mini-cal-day empty';
+    grid.appendChild(el);
+  }
+
+  // Collect dates with appointments
+  const apptDates = new Set(filteredAppts.map(a => a.appt_date));
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const d = new Date(miniCalDate.getFullYear(), miniCalDate.getMonth(), day);
+    const dateStr = dateToStr(d);
+    const isToday = d.getTime() === today.getTime();
+    const hasAppt = apptDates.has(dateStr);
+    const el = document.createElement('div');
+    el.className = 'mini-cal-day' + (isToday ? ' today' : '') + (hasAppt ? ' has-appt' : '');
+    el.textContent = day;
+    el.onclick = () => {
+      currentWeekStart = getMonday(d);
+      renderWeek();
+    };
+    grid.appendChild(el);
+  }
+}
+
+function miniCalPrev() { miniCalDate.setMonth(miniCalDate.getMonth() - 1); renderMiniCal(); }
+function miniCalNext() { miniCalDate.setMonth(miniCalDate.getMonth() + 1); renderMiniCal(); }
+
+// ══════════════════════════════════════════
+// STATS
+// ══════════════════════════════════════════
+function updateStats() {
+  const todayStr = dateToStr(new Date());
+  const weekEnd = new Date(currentWeekStart);
+  weekEnd.setDate(weekEnd.getDate() + 6);
+  const wsStr = dateToStr(currentWeekStart);
+  const weStr = dateToStr(weekEnd);
+
+  const weekAppts = filteredAppts.filter(a => a.appt_date >= wsStr && a.appt_date <= weStr);
+  document.getElementById('statTotal').textContent = weekAppts.length;
+  document.getElementById('statToday').textContent = weekAppts.filter(a => a.appt_date === todayStr).length;
+  document.getElementById('statConfirmed').textContent = weekAppts.filter(a => a.status === 'confirmed').length;
+  document.getElementById('statPending').textContent = weekAppts.filter(a => a.status === 'pending').length;
+}
+
+// ══════════════════════════════════════════
+// MODAL
+// ══════════════════════════════════════════
+function openNewModal() {
+  editingId = null;
+  document.getElementById('modalTitleText').textContent = '📋 เพิ่มนัดหมายใหม่';
+  document.getElementById('btnDelete').style.display = 'none';
+  clearForm();
+  const today = new Date();
+  document.getElementById('fDate').value = dateToStr(today);
+  document.getElementById('apptModal').classList.add('open');
+}
+
+function openNewModalOnDate(d, hour) {
+  openNewModal();
+  document.getElementById('fDate').value = dateToStr(d);
+  if (hour !== undefined) {
+    document.getElementById('fTime').value = `${hour.toString().padStart(2,'0')}:00`;
+  }
+}
+
+function openEditModal(a) {
+  editingId = a.id;
+  document.getElementById('modalTitleText').textContent = '✏️ แก้ไขนัดหมาย';
+  document.getElementById('btnDelete').style.display = 'flex';
+  document.getElementById('fName').value = a.customer_name;
+  document.getElementById('fPhone').value = a.phone || '';
+  document.getElementById('fCar').value = a.car_model || '';
+  document.getElementById('fPlate').value = a.license_plate || '';
+  document.getElementById('fType').value = a.service_type;
+  document.getElementById('fMechanic').value = a.mechanic || '';
+  document.getElementById('fStatus').value = a.status;
+  document.getElementById('fDate').value = a.appt_date;
+  document.getElementById('fTime').value = a.appt_time.substring(0, 5);
+  document.getElementById('fDuration').value = a.duration_min;
+  document.getElementById('fNotes').value = a.notes || '';
+  document.getElementById('apptModal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('apptModal').classList.remove('open');
+}
+
+function clearForm() {
+  ['fName','fPhone','fCar','fPlate','fNotes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('fType').value = 'general';
+  document.getElementById('fMechanic').value = '';
+  document.getElementById('fStatus').value = 'confirmed';
+  document.getElementById('fTime').value = '09:00';
+  document.getElementById('fDuration').value = '60';
+}
+
+// Close modal on overlay click
+document.getElementById('apptModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ══════════════════════════════════════════
+// WEEK NAV
+// ══════════════════════════════════════════
+function prevWeek() {
+  currentWeekStart.setDate(currentWeekStart.getDate() - 7);
+  renderWeek(); updateStats();
+}
+function nextWeek() {
+  currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+  renderWeek(); updateStats();
+}
+function goToday() {
+  currentWeekStart = getMonday(new Date());
+  renderWeek(); updateStats();
+}
+
+// ══════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════
+function getMonday(d) {
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  const mon = new Date(d);
+  mon.setDate(diff);
+  mon.setHours(0,0,0,0);
+  return mon;
+}
+
+function dateToStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function setLoading(on) {
+  document.getElementById('loadingBar').style.width = on ? '60%' : '100%';
+  if (!on) setTimeout(() => { document.getElementById('loadingBar').style.width = '0'; }, 300);
+}
+
+function showToast(msg, type = 'success') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<span>${type === 'success' ? '✅' : '❌'}</span> ${msg}`;
+  c.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3000);
+}
+
+function getSampleData() {
+  const today = dateToStr(new Date());
+  const tom = dateToStr(new Date(Date.now() + 86400000));
+  return [
+    { id: 's1', customer_name: 'สมชาย รักรถ', phone: '081-234-5678', car_model: 'CX-5 2.2D', license_plate: 'กข 1234', service_type: 'dpf', mechanic: 'สุทธินนท์', appt_date: today, appt_time: '09:00', duration_min: 120, status: 'confirmed', notes: 'DPF ตัน เตือน', created_at: new Date().toISOString() },
+    { id: 's2', customer_name: 'วิภา เดินทาง', phone: '092-345-6789', car_model: 'Mazda2 1.3', license_plate: 'ขค 5678', service_type: 'general', mechanic: 'ภควัต', appt_date: today, appt_time: '11:00', duration_min: 60, status: 'confirmed', notes: 'เช็คระยะ 10,000 กม.', created_at: new Date().toISOString() },
+    { id: 's3', customer_name: 'ประสิทธิ์ ช่างยนต์', phone: '083-456-7890', car_model: 'BT-50 Pro', license_plate: 'คง 9012', service_type: 'engine', mechanic: 'อภิสิทธิ์', appt_date: tom, appt_time: '08:00', duration_min: 180, status: 'pending', notes: 'Turbo รั่ว เสียงดัง', created_at: new Date().toISOString() },
+  ];
+}
+</script>
+</body>
+</html>
